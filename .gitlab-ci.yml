@@ -1,0 +1,7 @@
+image: python:3.7
+
+
+sync:
+  script:
+    - pip install awscli
+    - aws s3 sync ./stacks s3://cf-templates-torijacarlos

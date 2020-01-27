@@ -1,0 +1,228 @@
+AWSTemplateFormatVersion: "2010-09-09" 
+
+Parameters: 
+  ProjectName: 
+    Type: String
+    AllowedPattern: "[a-z]+"
+    Description: Project that will be using this network
+  VPCCidr : 
+    Type: String
+    Default: "192.168.0.0/22"
+    Description: Network's CIDR
+
+Resources:
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: !Ref VPCCidr 
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - [ !Ref ProjectName, "vpc" ]
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties: 
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - [ !Ref ProjectName, "ig" ]
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties: 
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  # subnets
+
+  ## private subnets
+
+  PrivateSubnetLeft:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select 
+        - 0
+        - Fn::GetAZs: !Ref AWS::Region
+      CidrBlock: !Select 
+        - 0
+        - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - [ !Ref ProjectName, "privsubnet", "left" ]
+
+  PrivateSubnetRight:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select 
+        - 1
+        - Fn::GetAZs: !Ref AWS::Region
+      CidrBlock: !Select 
+        - 1
+        - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - [ !Ref ProjectName, "privsubnet", "right" ]
+
+  ## public subnets
+
+  PublicSubnetLeft:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select 
+        - 0
+        - Fn::GetAZs: !Ref AWS::Region
+      CidrBlock: !Select 
+        - 2
+        - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - [ !Ref ProjectName, "pubsubnet", "left" ]
+
+  PublicSubnetRight:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select 
+        - 1
+        - Fn::GetAZs: !Ref AWS::Region
+      CidrBlock: !Select 
+        - 3
+        - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - [ !Ref ProjectName, "pubsubnet", "right" ]
+
+  # nat gateways
+
+  EIPLeft:
+    Type: AWS::EC2::EIP
+    Properties: 
+      Domain: vpc
+
+  NatGatewayLeft:
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      AllocationId: !GetAtt [ EIPLeft, AllocationId ]
+      SubnetId: !Ref PublicSubnetLeft
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - [ !Ref ProjectName, "ng", "left" ]
+
+  EIPRight:
+    Type: AWS::EC2::EIP
+    Properties: 
+      Domain: vpc
+
+  NatGatewayRight:
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      AllocationId: !GetAtt [ EIPRight, AllocationId ]
+      SubnetId: !Ref PublicSubnetRight
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - [ !Ref ProjectName, "ng", "right" ]
+
+  # routing
+
+  ## private route table
+
+  PrivateRouteTableLeft:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - [ !Ref ProjectName, "rt", "private", "left" ]
+
+  PrivateRouteTableOutLeft:
+    Type: AWS::EC2::Route
+    Properties: 
+      RouteTableId: !Ref PrivateRouteTableLeft
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGatewayLeft
+  PrivateSubnetLeftRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      RouteTableId: !Ref PrivateRouteTableLeft
+      SubnetId: !Ref PrivateSubnetLeft
+
+  PrivateRouteTableRight:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - [ !Ref ProjectName, "rt", "private", "right" ]
+
+  PrivateRouteTableOutRight:
+    Type: AWS::EC2::Route
+    Properties: 
+      RouteTableId: !Ref PrivateRouteTableRight
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGatewayRight
+  PrivateSubnetRightRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      RouteTableId: !Ref PrivateRouteTableRight
+      SubnetId: !Ref PrivateSubnetRight
+
+  ## public route table
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - [ !Ref ProjectName, "rt", "public" ]
+
+  PublicRouteTableOutIPv4:
+    Type: AWS::EC2::Route
+    Properties: 
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+  PublicRouteTableOutIPv6:
+    Type: AWS::EC2::Route
+    Properties: 
+      RouteTableId: !Ref PublicRouteTable
+      DestinationIpv6CidrBlock: "::/0"
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetLeftRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetLeft
+  PublicSubnetRightRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetRight
