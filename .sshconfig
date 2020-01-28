@@ -1,0 +1,3 @@
+Host github.com
+    User torijacarlos
+    IdentityFile ~/.ssh/github
