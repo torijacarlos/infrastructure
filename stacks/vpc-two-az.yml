@@ -5,7 +5,7 @@ Parameters:
     Type: String
     AllowedPattern: "[a-z]+"
     Description: Project that will be using this network
-  VPCCidr : 
+  VPCCidr: 
     Type: String
     Default: "192.168.0.0/22"
     Description: Network's CIDR
@@ -226,3 +226,85 @@ Resources:
     Properties: 
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnetRight
+
+  # security groups
+
+  HTTPSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http security group
+      VpcId:
+        Ref: VPC
+      # only allow from public subnets
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Select 
+            - 2
+            - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Select 
+            - 3
+            - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
+
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow db security group
+      VpcId:
+        Ref: VPC
+      # only allow from private subnets
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: !Select 
+            - 0
+            - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: !Select 
+            - 1
+            - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
+
+Outputs:
+  VpcID:
+    Description: VPC Id
+    Value: !Ref VPC
+    Export:
+      Name: !Join [ "-", [ !Ref ProjectName, "vpc-id" ] ]
+
+  VpcCIDR:
+    Description: VPC CIDR
+    Value: !GetAtt VPC.CidrBlock
+    Export:
+      Name: !Join [ "-", [ !Ref ProjectName, "vpc-cidr" ] ]
+
+  PublicSubnets:
+    Description: Public subnets created for the stack
+    Value: !Join [ ",", [ !Ref PublicSubnetRight, !Ref PublicSubnetLeft ] ]
+    Export:
+      Name: !Join [ "-", [ !Ref ProjectName, "public-subnets-list" ] ]
+
+  PrivateSubnets:
+    Description: Private subnets created for the stack
+    Value: !Join [ ",", [ !Ref PrivateSubnetRight, !Ref PrivateSubnetLeft ] ]
+    Export:
+      Name: !Join [ "-", [ !Ref ProjectName, "private-subnets-list" ] ]
+
+  HTTPSecurityGroup:
+    Description: Security group for http
+    Value: !Ref HTTPSecurityGroup
+    Export:
+      Name: !Join [ "-", [ !Ref ProjectName, "sg-http" ] ]
+
+  DBSecurityGroup:
+    Description: Security group for db
+    Value: !Ref DBSecurityGroup
+    Export:
+      Name: !Join [ "-", [ !Ref ProjectName, "sg-db" ] ]
