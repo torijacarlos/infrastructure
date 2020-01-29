@@ -273,38 +273,26 @@ Resources:
             - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
 
 Outputs:
-  VpcID:
+  VpcId:
     Description: VPC Id
     Value: !Ref VPC
-    Export:
-      Name: !Join [ "-", [ !Ref ProjectName, "vpc-id" ] ]
 
   VpcCIDR:
     Description: VPC CIDR
     Value: !GetAtt VPC.CidrBlock
-    Export:
-      Name: !Join [ "-", [ !Ref ProjectName, "vpc-cidr" ] ]
 
   PublicSubnets:
     Description: Public subnets created for the stack
     Value: !Join [ ",", [ !Ref PublicSubnetRight, !Ref PublicSubnetLeft ] ]
-    Export:
-      Name: !Join [ "-", [ !Ref ProjectName, "public-subnets-list" ] ]
 
   PrivateSubnets:
     Description: Private subnets created for the stack
     Value: !Join [ ",", [ !Ref PrivateSubnetRight, !Ref PrivateSubnetLeft ] ]
-    Export:
-      Name: !Join [ "-", [ !Ref ProjectName, "private-subnets-list" ] ]
 
   HTTPSecurityGroup:
     Description: Security group for http
     Value: !Ref HTTPSecurityGroup
-    Export:
-      Name: !Join [ "-", [ !Ref ProjectName, "sg-http" ] ]
 
   DBSecurityGroup:
     Description: Security group for db
     Value: !Ref DBSecurityGroup
-    Export:
-      Name: !Join [ "-", [ !Ref ProjectName, "sg-db" ] ]
