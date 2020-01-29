@@ -241,6 +241,11 @@ Resources:
           FromPort: 443
           ToPort: 443
           CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - [ !Ref ProjectName, "sg", "https" ]
 
   HTTPSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -262,6 +267,11 @@ Resources:
           CidrIp: !Select 
             - 3
             - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - [ !Ref ProjectName, "sg", "http" ]
 
 
   DBSecurityGroup:
@@ -284,6 +294,11 @@ Resources:
           CidrIp: !Select 
             - 1
             - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - [ !Ref ProjectName, "sg", "db" ]
 
 Outputs:
   VpcId:
