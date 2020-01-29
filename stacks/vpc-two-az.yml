@@ -229,6 +229,19 @@ Resources:
 
   # security groups
 
+  HTTPSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http security group
+      VpcId:
+        Ref: VPC
+      # allow access from the world
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
   HTTPSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -288,6 +301,10 @@ Outputs:
   PrivateSubnets:
     Description: Private subnets created for the stack
     Value: !Join [ ",", [ !Ref PrivateSubnetRight, !Ref PrivateSubnetLeft ] ]
+
+  HTTPSSecurityGroup:
+    Description: Security group for https
+    Value: !Ref HTTPSSecurityGroup
 
   HTTPSecurityGroup:
     Description: Security group for http
