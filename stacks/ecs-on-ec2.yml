@@ -1,0 +1,145 @@
+AWSTemplateFormatVersion: "2010-09-09" 
+
+Mappings: 
+  RegionMap:
+    us-west-2:
+      ami: ami-05f4cc9df35a4ad8a 
+
+Parameters: 
+  ProjectName: 
+    Type: String
+    AllowedPattern: "[a-z]+"
+    Description: Project that will be using this instances
+  SSLCertificate: 
+    Type: String
+    Default: "arn:aws:acm:us-west-2:819347201384:certificate/df1eb809-da7e-4418-8493-eba84e49f8fc"
+    Description: Project that will be using this instances
+  VpcId:
+    Type: String
+    Description: VPC in which the instances will leave
+  HTTPSSecurityGroup:
+    Type: String
+    Description: Security group that allows https (port 443)
+  HTTPSecurityGroup:
+    Type: String
+    Description: Security group that allows https (port 80)
+  PrivateSubnets:
+    Type: List<String>
+    Description: Private subnets within the VPC
+  PublicSubnets:
+    Type: List<String>
+    Description: Public subnets within the VPC
+  ECRArn:
+    Type: String
+    Description: Arn for the repository of the containers in the application
+
+
+Resources:
+  
+  # Instances auto scaling group
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties: 
+      LaunchTemplateName: !Sub ${AWS::StackName}-launch-template
+      LaunchTemplateData: 
+        ImageId: !FindInMap
+          - "RegionMap"
+          - !Ref AWS::Region
+          - ami
+        InstanceType: t2.micro
+        SecurityGroupIds: 
+          - !Ref HTTPSecurityGroup
+        UserData: 
+          Fn::Base64: 
+            Fn::Join:
+              - ""
+              - - "#!/bin/bash -xe\n"
+                - !Sub "echo ECS_CLUSTER=${ProjectName} >> /etc/ecs/ecs.config\n"
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub ${AWS::StackName}-asg
+      MinSize: "1"
+      MaxSize: "2"
+      DesiredCapacity: "1"
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      TargetGroupARNs:
+        - !Ref TargetGroup
+      VPCZoneIdentifier: 
+        !Ref PrivateSubnets
+
+  # Application load balancer
+
+  ELB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      IpAddressType: ipv4
+      Type: application
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref HTTPSSecurityGroup
+      Subnets: 
+        !Ref PublicSubnets
+
+  # Target groups
+
+  TargetGroup:
+    DependsOn: ELB
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Certificates:
+        - CertificateArn: !Ref SSLCertificate
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      LoadBalancerArn: !Ref ELB
+      Port: 443
+      Protocol: HTTPS
+
+  # ecs
+
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties: 
+      ClusterName: !Ref ProjectName
+
+  ECSTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties: 
+      ContainerDefinitions: 
+        - Name: !Ref ProjectName
+          Image: !Ref ECRArn
+          Memory: 512
+          PortMappings:
+            - ContainerPort: 80
+              HostPort: 80
+              Protocol: tcp
+
+  ECSService:
+    DependsOn: Listener
+    Type: AWS::ECS::Service
+    Properties: 
+      Cluster: !GetAtt ECSCluster.Arn
+      DeploymentController:
+        Type: ECS
+      HealthCheckGracePeriodSeconds: 60
+      LaunchType: EC2
+      DesiredCount: 1
+      LoadBalancers: 
+        - TargetGroupArn: 
+            !Ref TargetGroup
+          ContainerName: !Ref ProjectName
+          ContainerPort: 80
+      ServiceName: !Ref ProjectName
+      TaskDefinition: !Ref ECSTaskDefinition

@@ -5,8 +5,6 @@ stages:
 
 s3:
   stage: sync
-  only:
-    - master
   script:
     - pip install awscli
     - aws s3 sync ./stacks s3://cf-templates-torijacarlos
