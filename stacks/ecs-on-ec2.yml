@@ -118,13 +118,25 @@ Resources:
     Type: AWS::ECS::TaskDefinition
     Properties: 
       ContainerDefinitions: 
-        - Name: !Ref ProjectName
-          Image: !Ref ECRArn
+        - Name: nginx
+          Image: 
+            Fn::Join:
+              - "/"
+              - [ !Ref ECRArn, "nginx" ] 
           Memory: 512
+          Links:
+            - !Ref ProjectName
           PortMappings:
             - ContainerPort: 80
               HostPort: 80
               Protocol: tcp
+        - Name: !Ref ProjectName
+          Image: 
+            Fn::Join:
+              - "/"
+              - [ !Ref ECRArn, "api" ] 
+          Memory: 512
+      NetworkMode: bridge
 
   ECSService:
     DependsOn: Listener
@@ -139,7 +151,7 @@ Resources:
       LoadBalancers: 
         - TargetGroupArn: 
             !Ref TargetGroup
-          ContainerName: !Ref ProjectName
+          ContainerName: nginx
           ContainerPort: 80
       ServiceName: !Ref ProjectName
       TaskDefinition: !Ref ECSTaskDefinition
