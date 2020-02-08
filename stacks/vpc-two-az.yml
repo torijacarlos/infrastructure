@@ -229,12 +229,27 @@ Resources:
 
   # security groups
 
+  SSHSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http security group
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - [ !Ref ProjectName, "sg", "ssh" ]
+
   HTTPSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Allow http security group
-      VpcId:
-        Ref: VPC
+      VpcId: !Ref VPC
       # allow access from the world
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -251,54 +266,51 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Allow http security group
-      VpcId:
-        Ref: VPC
-      # only allow from public subnets
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: !Select 
-            - 2
-            - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: !Select 
-            - 3
-            - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
+      VpcId: !Ref VPC
       Tags:
         - Key: Name
           Value: !Join
             - "-"
             - [ !Ref ProjectName, "sg", "http" ]
 
+  HTTPInboundRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt HTTPSecurityGroup.GroupId
+      IpProtocol: tcp
+      FromPort: 80
+      ToPort: 80
+      SourceSecurityGroupId: !GetAtt HTTPSSecurityGroup.GroupId
+
 
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Allow db security group
-      VpcId:
-        Ref: VPC
-      # only allow from private subnets
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 3306
-          ToPort: 3306
-          CidrIp: !Select 
-            - 0
-            - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
-        - IpProtocol: tcp
-          FromPort: 3306
-          ToPort: 3306
-          CidrIp: !Select 
-            - 1
-            - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
+      VpcId: !Ref VPC
       Tags:
         - Key: Name
           Value: !Join
             - "-"
             - [ !Ref ProjectName, "sg", "db" ]
+
+  DBFromHttpInboundRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt DBSecurityGroup.GroupId
+      IpProtocol: tcp
+      FromPort: 3306
+      ToPort: 3306
+      SourceSecurityGroupId: !GetAtt HTTPSecurityGroup.GroupId
+
+  DBFromSshInboundRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt DBSecurityGroup.GroupId
+      IpProtocol: tcp
+      FromPort: 3306
+      ToPort: 3306
+      SourceSecurityGroupId: !GetAtt SSHSecurityGroup.GroupId
 
 Outputs:
   VpcId:
@@ -316,6 +328,10 @@ Outputs:
   PrivateSubnets:
     Description: Private subnets created for the stack
     Value: !Join [ ",", [ !Ref PrivateSubnetRight, !Ref PrivateSubnetLeft ] ]
+
+  SSHSecurityGroup:
+    Description: Security group for https
+    Value: !Ref SSHSecurityGroup
 
   HTTPSSecurityGroup:
     Description: Security group for https
