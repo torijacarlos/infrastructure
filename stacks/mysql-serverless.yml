@@ -86,6 +86,9 @@ Resources:
           Fn::Join:
             - "\n"
             - [ "#!/bin/bash -xe", "yum update -y", "yum -y install mysql"]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-ec2-bastion"
 
   HostParameter:
     Type: AWS::SSM::Parameter

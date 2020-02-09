@@ -1,3 +1,4 @@
+---
 AWSTemplateFormatVersion: "2010-09-09" 
 
 Mappings: 
@@ -17,6 +18,9 @@ Parameters:
   TaskRoleArn:
     Type: String
     Description: Role used to consume aws services within the api task
+  BastionKeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: EC2 key used to connect to the bastion host
   SSLCertificate: 
     Type: String
     Default: "arn:aws:acm:us-west-2:819347201384:certificate/df1eb809-da7e-4418-8493-eba84e49f8fc"
@@ -40,7 +44,6 @@ Parameters:
     Type: String
     Description: Arn for the repository of the containers in the application
 
-
 Resources:
   
   # Instances auto scaling group
@@ -50,6 +53,7 @@ Resources:
     Properties: 
       LaunchTemplateName: !Sub ${AWS::StackName}-launch-template
       LaunchTemplateData: 
+        KeyName: !Ref BastionKeyName
         ImageId: !FindInMap
           - "RegionMap"
           - !Ref AWS::Region
@@ -63,6 +67,11 @@ Resources:
               - ""
               - - "#!/bin/bash -xe\n"
                 - !Sub "echo ECS_CLUSTER=${ProjectName} >> /etc/ecs/ecs.config\n"
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub "${ProjectName}-ecs-cluster"
 
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
