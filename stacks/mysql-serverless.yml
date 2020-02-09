@@ -62,7 +62,7 @@ Resources:
       DBClusterIdentifier: 
         Fn::Join:
           - "-"
-          - [ !Ref ProjectName, "db" ]
+          - [ !Ref ProjectName, !Ref Env, "db" ]
       DBSubnetGroupName: !Ref DBSubnetGroup
       BackupRetentionPeriod: 35
       VpcSecurityGroupIds:
