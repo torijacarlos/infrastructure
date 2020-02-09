@@ -177,7 +177,7 @@ Resources:
             Fn::Join:
               - "/"
               - [ !Ref ECRArn, "nginx" ] 
-          Memory: 256
+          Memory: 128
           Links:
             - !Ref ProjectName
           PortMappings:
@@ -200,7 +200,7 @@ Resources:
             Fn::Join:
               - "/"
               - [ !Ref ECRArn, "api" ] 
-          Memory: 768
+          Memory: 512
           Environment:
             - Name: ENV
               Value: !Ref Env
