@@ -10,6 +10,9 @@ Parameters:
     Type: String
     AllowedPattern: "[a-z]+"
     Description: Project that will be using this instances
+  TaskRoleArn:
+    Type: String
+    Description: Role used to consume aws services within the api task
   SSLCertificate: 
     Type: String
     Default: "arn:aws:acm:us-west-2:819347201384:certificate/df1eb809-da7e-4418-8493-eba84e49f8fc"
@@ -117,6 +120,7 @@ Resources:
   ECSTaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties: 
+      TaskRoleArn: !Ref TaskRoleArn
       ContainerDefinitions: 
         - Name: nginx
           Image: 
