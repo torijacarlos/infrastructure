@@ -273,7 +273,7 @@ Resources:
             - "-"
             - [ !Ref ProjectName, "sg", "http" ]
 
-  HTTPInboundRule:
+  HTTPFromHTTPSInboundRule:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !GetAtt HTTPSecurityGroup.GroupId
@@ -282,6 +282,14 @@ Resources:
       ToPort: 80
       SourceSecurityGroupId: !GetAtt HTTPSSecurityGroup.GroupId
 
+  HTTPFromSSHInboundRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt HTTPSecurityGroup.GroupId
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      SourceSecurityGroupId: !GetAtt SSHSecurityGroup.GroupId
 
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
