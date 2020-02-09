@@ -123,7 +123,7 @@ Resources:
             Fn::Join:
               - "/"
               - [ !Ref ECRArn, "nginx" ] 
-          Memory: 512
+          Memory: 256
           Links:
             - !Ref ProjectName
           PortMappings:
@@ -135,7 +135,7 @@ Resources:
             Fn::Join:
               - "/"
               - [ !Ref ECRArn, "api" ] 
-          Memory: 512
+          Memory: 768
       NetworkMode: bridge
 
   ECSService:

@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Aurora serverless cluster
+
+Parameters:
+  ProjectName:
+    Type: String
+    AllowedPattern: "[a-z]+"
+  DatabaseName:
+    Type: String
+    AllowedPattern: "[A-Z]+"
+  Env:
+    Type: String
+    AllowedPattern: "[a-z]+"
+  ClusterRootUser:
+    Type: String
+    Default: root
+  ClusterRootPass:
+    Type: String
+    NoEcho: true
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  SshSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  DBSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  BastionImageId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn-ami-hvm-x86_64-ebs
+  BastionKeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: EC2 key used to connect to the bastion host
+  PrivateSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Private subnets within the VPC
+  PublicSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Public subnets within the VPC
+
+Resources:
+
+  DBSubnetGroup: 
+    Type: AWS::RDS::DBSubnetGroup
+    Properties: 
+      DBSubnetGroupDescription: Private subnet group for the aurora cluster
+      SubnetIds: !Ref PrivateSubnets
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - [ !Ref ProjectName, "privsubnetgroup" ]
+
+  Cluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Engine: aurora
+      EngineMode: serverless
+      EngineVersion: 5.6
+      DatabaseName: !Ref DatabaseName
+      MasterUsername: !Ref ClusterRootUser
+      MasterUserPassword: !Ref ClusterRootPass
+      DBClusterIdentifier: 
+        Fn::Join:
+          - "-"
+          - [ !Ref ProjectName, "db" ]
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      BackupRetentionPeriod: 35
+      VpcSecurityGroupIds:
+        - !Ref DBSecurityGroupId
+
+  Bastion:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref BastionImageId
+      InstanceType: t2.nano
+      KeyName: !Ref BastionKeyName
+      Monitoring: false
+      SubnetId: 
+        Fn::Select:
+          - 0
+          - !Ref PublicSubnets
+      SecurityGroupIds:
+        - !Ref SshSecurityGroupId
+      UserData: 
+        Fn::Base64:
+          Fn::Join:
+            - "\n"
+            - [ "#!/bin/bash -xe", "yum update -y", "yum -y install mysql"]
+
+  HostParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: 
+        Fn::Join:
+          - "/"
+          - [ "", !Ref ProjectName, !Ref Env, "db", "host"]
+      Type: String
+      Value: !GetAtt Cluster.Endpoint.Address
+      Description: Host for the aurora cluster
+
+  UserParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: 
+        Fn::Join:
+          - "/"
+          - [ "", !Ref ProjectName, !Ref Env, "db", "rootuser"]
+      Type: String
+      Value: !Ref ClusterRootUser
+      Description: User for the aurora cluster
+
+  PassParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: 
+        Fn::Join:
+          - "/"
+          - [ "", !Ref ProjectName, !Ref Env, "db", "rootpass"]
+      Type: String
+      Value: !Ref ClusterRootPass
+      Description: Pass for the aurora cluster
