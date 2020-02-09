@@ -10,6 +10,10 @@ Parameters:
     Type: String
     AllowedPattern: "[a-z]+"
     Description: Project that will be using this instances
+  Env: 
+    Type: String
+    AllowedPattern: "[a-z]+"
+    Description: Environment in which the project is being executed
   TaskRoleArn:
     Type: String
     Description: Role used to consume aws services within the api task
@@ -110,6 +114,26 @@ Resources:
       Port: 443
       Protocol: HTTPS
 
+  # cloudwatch
+
+  NginxLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: 
+        Fn::Join:
+          - "/"
+          - [ !Ref ProjectName, !Ref Env, "nginx"]
+      RetentionInDays: 14
+
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: 
+        Fn::Join:
+          - "/"
+          - [ !Ref ProjectName, !Ref Env, "api"]
+      RetentionInDays: 14
+
   # ecs
 
   ECSCluster:
@@ -121,6 +145,7 @@ Resources:
     Type: AWS::ECS::TaskDefinition
     Properties: 
       TaskRoleArn: !Ref TaskRoleArn
+      NetworkMode: bridge
       ContainerDefinitions: 
         - Name: nginx
           Image: 
@@ -134,13 +159,23 @@ Resources:
             - ContainerPort: 80
               HostPort: 80
               Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref NginxLogGroup
+              awslogs-region: !Ref AWS::Region
+
         - Name: !Ref ProjectName
           Image: 
             Fn::Join:
               - "/"
               - [ !Ref ECRArn, "api" ] 
           Memory: 768
-      NetworkMode: bridge
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref ApiLogGroup
+              awslogs-region: !Ref AWS::Region
 
   ECSService:
     DependsOn: Listener
