@@ -229,3 +229,11 @@ Resources:
           ContainerPort: 80
       ServiceName: !Ref ProjectName
       TaskDefinition: !Ref ECSTaskDefinition
+
+Outputs:
+  CanonicalHostedZoneID:
+    Description: Canonical hosted zone of the Load balancer
+    Value: !GetAtt ELB.CanonicalHostedZoneID
+  DNSName:
+    Description: DNSName of the Load balancer
+    Value: !GetAtt ELB.DNSName
