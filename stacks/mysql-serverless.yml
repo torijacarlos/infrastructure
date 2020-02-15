@@ -46,9 +46,7 @@ Resources:
       SubnetIds: !Ref PrivateSubnets
       Tags:
         - Key: Name
-          Value: !Join
-            - "-"
-            - [ !Ref ProjectName, "privsubnetgroup" ]
+          Value: !Sub "${ProjectName}-privsubnetgroup"
 
   Cluster:
     Type: AWS::RDS::DBCluster
@@ -59,10 +57,7 @@ Resources:
       DatabaseName: !Ref DatabaseName
       MasterUsername: !Ref ClusterRootUser
       MasterUserPassword: !Ref ClusterRootPass
-      DBClusterIdentifier: 
-        Fn::Join:
-          - "-"
-          - [ !Ref ProjectName, !Ref Env, "db" ]
+      DBClusterIdentifier: !Sub "${ProjectName}-${Env}-db"
       DBSubnetGroupName: !Ref DBSubnetGroup
       BackupRetentionPeriod: 35
       VpcSecurityGroupIds:
@@ -93,10 +88,7 @@ Resources:
   HostParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: 
-        Fn::Join:
-          - "/"
-          - [ "", !Ref ProjectName, !Ref Env, "db", "host"]
+      Name: !Sub "${ProjectName}/${Env}/db/host"
       Type: String
       Value: !GetAtt Cluster.Endpoint.Address
       Description: Host for the aurora cluster
@@ -104,10 +96,7 @@ Resources:
   UserParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: 
-        Fn::Join:
-          - "/"
-          - [ "", !Ref ProjectName, !Ref Env, "db", "rootuser"]
+      Name: !Sub "${ProjectName}/${Env}/db/rootuser"
       Type: String
       Value: !Ref ClusterRootUser
       Description: User for the aurora cluster
@@ -115,10 +104,7 @@ Resources:
   PassParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: 
-        Fn::Join:
-          - "/"
-          - [ "", !Ref ProjectName, !Ref Env, "db", "rootpass"]
+      Name: !Sub "${ProjectName}/${Env}/db/rootpass"
       Type: String
       Value: !Ref ClusterRootPass
       Description: Pass for the aurora cluster

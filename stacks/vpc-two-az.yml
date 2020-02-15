@@ -18,18 +18,14 @@ Resources:
       CidrBlock: !Ref VPCCidr 
       Tags:
         - Key: Name
-          Value: !Join
-            - "-"
-            - [ !Ref ProjectName, "vpc" ]
+          Value: !Sub "${ProjectName}-vpc"
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties: 
       Tags:
         - Key: Name
-          Value: !Join
-            - "-"
-            - [ !Ref ProjectName, "ig" ]
+          Value: !Sub "${ProjectName}-ig"
 
   VPCGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -53,9 +49,7 @@ Resources:
         - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
       Tags:
         - Key: Name
-          Value: !Join
-            - "-"
-            - [ !Ref ProjectName, "privsubnet", "left" ]
+          Value: !Sub "${ProjectName}-privsubnet-left"
 
   PrivateSubnetRight:
     Type: AWS::EC2::Subnet
@@ -69,9 +63,7 @@ Resources:
         - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
       Tags:
         - Key: Name
-          Value: !Join
-            - "-"
-            - [ !Ref ProjectName, "privsubnet", "right" ]
+          Value: !Sub "${ProjectName}-privsubnet-rigth"
 
   ## public subnets
 
@@ -88,9 +80,7 @@ Resources:
         - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
       Tags:
         - Key: Name
-          Value: !Join
-            - "-"
-            - [ !Ref ProjectName, "pubsubnet", "left" ]
+          Value: !Sub "${ProjectName}-pubsubnet-left"
 
   PublicSubnetRight:
     Type: AWS::EC2::Subnet
@@ -105,9 +95,7 @@ Resources:
         - Fn::Cidr: [ !Ref VPCCidr, 4, 8 ]
       Tags:
         - Key: Name
-          Value: !Join
-            - "-"
-            - [ !Ref ProjectName, "pubsubnet", "right" ]
+          Value: !Sub "${ProjectName}-pubsubnet-right"
 
   # nat gateways
 
@@ -123,9 +111,7 @@ Resources:
       SubnetId: !Ref PublicSubnetLeft
       Tags:
         - Key: Name
-          Value: !Join
-            - "-"
-            - [ !Ref ProjectName, "ng", "left" ]
+          Value: !Sub "${ProjectName}-ng-left"
 
   # routing
 
@@ -137,9 +123,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Join
-            - "-"
-            - [ !Ref ProjectName, "rt", "private", "left" ]
+          Value: !Sub "${ProjectName}-rt-private-left"
 
   PrivateRouteTableOutLeft:
     Type: AWS::EC2::Route
@@ -159,9 +143,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Join
-            - "-"
-            - [ !Ref ProjectName, "rt", "private", "right" ]
+          Value: !Sub "${ProjectName}-rt-private-right"
 
   PrivateRouteTableOutRight:
     Type: AWS::EC2::Route
@@ -183,9 +165,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Join
-            - "-"
-            - [ !Ref ProjectName, "rt", "public" ]
+          Value: !Sub "${ProjectName}-rt-public"
 
   PublicRouteTableOutIPv4:
     Type: AWS::EC2::Route
@@ -225,9 +205,7 @@ Resources:
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
-          Value: !Join
-            - "-"
-            - [ !Ref ProjectName, "sg", "ssh" ]
+          Value: !Sub "${ProjectName}-sg-ssh"
 
   HTTPSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -242,9 +220,7 @@ Resources:
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
-          Value: !Join
-            - "-"
-            - [ !Ref ProjectName, "sg", "https" ]
+          Value: !Sub "${ProjectName}-sg-https"
 
   HTTPSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -253,9 +229,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Join
-            - "-"
-            - [ !Ref ProjectName, "sg", "http" ]
+          Value: !Sub "${ProjectName}-sg-http"
 
   HTTPFromHTTPSInboundRule:
     Type: AWS::EC2::SecurityGroupIngress
@@ -282,9 +256,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Join
-            - "-"
-            - [ !Ref ProjectName, "sg", "db" ]
+          Value: !Sub "${ProjectName}-sg-db"
 
   DBFromHttpInboundRule:
     Type: AWS::EC2::SecurityGroupIngress
@@ -315,11 +287,11 @@ Outputs:
 
   PublicSubnets:
     Description: Public subnets created for the stack
-    Value: !Join [ ",", [ !Ref PublicSubnetRight, !Ref PublicSubnetLeft ] ]
+    Value: !Sub "${PublicSubnetRight},${PublicSubnetLeft}"
 
   PrivateSubnets:
     Description: Private subnets created for the stack
-    Value: !Join [ ",", [ !Ref PrivateSubnetRight, !Ref PrivateSubnetLeft ] ]
+    Value: !Sub "${PrivateSubnetRight},${PrivateSubnetLeft}"
 
   SSHSecurityGroup:
     Description: Security group for https

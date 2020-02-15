@@ -144,19 +144,13 @@ Resources:
   NginxLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
-      LogGroupName: 
-        Fn::Join:
-          - "/"
-          - [ !Ref ProjectName, !Ref Env, "nginx"]
+      LogGroupName: !Sub "${ProjectName}/${Env}/nginx"
       RetentionInDays: 14
 
   ApiLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
-      LogGroupName: 
-        Fn::Join:
-          - "/"
-          - [ !Ref ProjectName, !Ref Env, "api"]
+      LogGroupName: !Sub "${ProjectName}/${Env}/api"
       RetentionInDays: 14
 
   # ecs
@@ -173,10 +167,7 @@ Resources:
       NetworkMode: bridge
       ContainerDefinitions: 
         - Name: nginx
-          Image: 
-            Fn::Join:
-              - "/"
-              - [ !Ref ECRArn, "nginx" ] 
+          Image: !Sub "${ECRArn}/nginx"
           Memory: 128
           Links:
             - !Ref ProjectName
@@ -196,10 +187,7 @@ Resources:
               awslogs-region: !Ref AWS::Region
 
         - Name: !Ref ProjectName
-          Image: 
-            Fn::Join:
-              - "/"
-              - [ !Ref ECRArn, "api" ] 
+          Image: !Sub "${ECRArn}/api"
           Memory: 512
           Environment:
             - Name: ENV
