@@ -1,4 +1,4 @@
-image: python:3.7
+image: python:3.7-buster
 
 stages:
   - validate
@@ -9,10 +9,7 @@ validate:
   stage: validate
   script:
     - pip install awscli
-    - aws cloudformation validate-template --template-body "$(cat ./stacks/ecs-on-ec2.yml)"
-    - aws cloudformation validate-template --template-body "$(cat ./stacks/mysql-serverless.yml)"
-    - aws cloudformation validate-template --template-body "$(cat ./stacks/vpc-two-az.yml)"
-    - aws cloudformation validate-template --template-body "$(cat ./stacks/service-orchestrator.yml)"
+    - make validate
 
 s3:
   stage: sync
