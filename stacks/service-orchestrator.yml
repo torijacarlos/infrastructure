@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: "2010-09-09" 
+
+Mappings: 
+  RegionMap:
+    us-west-2:
+      ami: ami-04590e7389a6e577c 
+
+Parameters: 
+  ProjectName: 
+    Type: String
+    AllowedPattern: "[a-z]+"
+    Description: Project that will be using this instances
+  DatabaseName: 
+    Type: String
+    AllowedPattern: "[A-Z]+"
+    Description: Name of the database the application uses for storage
+  EcsInstanceRoleName:
+    Type: String
+    Description: Instance role used to consume ecs services
+    Default: ecsInstanceRole
+  TaskRoleArn:
+    Type: String
+    Description: Role used to consume aws services within the api task
+  Env: 
+    Type: String
+    AllowedValues: 
+      - "prod"
+      - "dev"
+    Description: Environment of the current stack
+  ClusterRootUser:
+    Type: String
+    Default: root
+  ClusterRootPass:
+    Type: String
+    NoEcho: true
+  SSLCertificate: 
+    Type: String
+    Default: "arn:aws:acm:us-west-2:819347201384:certificate/df1eb809-da7e-4418-8493-eba84e49f8fc"
+  StackTemplateBucket:
+    Type: String
+    Default: "cf-templates-torijacarlos"
+  StackTemplateRegion:
+    Type: String
+    Default: "us-west-2"
+  StackTemplateNetwork:
+    Type: String
+    Default: "vpc-two-az.yml"
+  StackTemplateNutsAndBolts:
+    Type: String
+    Default: "ecs-on-ec2.yml"
+  StackTemplateDatabase:
+    Type: String
+    Default: "mysql-serverless.yml"
+  BastionKeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: EC2 key used to connect to the bastion host
+
+Resources:
+
+  Network:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters: 
+        ProjectName: !Ref ProjectName
+      TemplateURL: !Sub "https://${StackTemplateBucket}.s3-${AWS::Region}.amazonaws.com/${StackTemplateNetwork}"
+
+  Database:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters: 
+        PrivateSubnets: !GetAtt Network.Outputs.PrivateSubnets
+        PublicSubnets: !GetAtt Network.Outputs.PublicSubnets
+        VpcId: !GetAtt Network.Outputs.VpcId
+        ProjectName: !Ref ProjectName
+        DatabaseName: !Ref DatabaseName
+        Env: !Ref Env
+        ClusterRootUser: !Ref ClusterRootUser
+        ClusterRootPass: !Ref ClusterRootPass
+        SshSecurityGroupId: !GetAtt Network.Outputs.SSHSecurityGroup
+        DBSecurityGroupId: !GetAtt Network.Outputs.DBSecurityGroup
+        BastionKeyName: !Ref BastionKeyName
+      TemplateURL: !Sub "https://${StackTemplateBucket}.s3-${AWS::Region}.amazonaws.com/${StackTemplateDatabase}"
+
+  NutsAndBolts:
+    DependsOn: Database
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters: 
+        ProjectName: !Ref ProjectName
+        Env: !Ref Env
+        BastionKeyName: !Ref BastionKeyName
+        TaskRoleArn: !Ref TaskRoleArn
+        EcsInstanceRole: !Ref EcsInstanceRoleName
+        SSLCertificate: !Ref SSLCertificate
+        HTTPSSecurityGroup: !GetAtt Network.Outputs.HTTPSSecurityGroup
+        HTTPSecurityGroup: !GetAtt Network.Outputs.HTTPSecurityGroup
+        PrivateSubnets: !GetAtt Network.Outputs.PrivateSubnets
+        PublicSubnets: !GetAtt Network.Outputs.PublicSubnets
+        VpcId: !GetAtt Network.Outputs.VpcId
+        ECRArn: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ProjectName}"
+      TemplateURL: !Sub "https://${StackTemplateBucket}.s3-${AWS::Region}.amazonaws.com/${StackTemplateNutsAndBolts}"
+
+
+  Route:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: seikou.io.
+      Comment: Zone targeted
+      RecordSets:
+      - Name: api.seikou.io.
+        Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt NutsAndBolts.Outputs.CanonicalHostedZoneID
+          DNSName: !GetAtt NutsAndBolts.Outputs.DNSName
