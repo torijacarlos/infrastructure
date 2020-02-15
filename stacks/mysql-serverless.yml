@@ -88,7 +88,7 @@ Resources:
   HostParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Sub "${ProjectName}/${Env}/db/host"
+      Name: !Sub "/${ProjectName}/${Env}/db/host"
       Type: String
       Value: !GetAtt Cluster.Endpoint.Address
       Description: Host for the aurora cluster
@@ -96,7 +96,7 @@ Resources:
   UserParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Sub "${ProjectName}/${Env}/db/rootuser"
+      Name: !Sub "/${ProjectName}/${Env}/db/rootuser"
       Type: String
       Value: !Ref ClusterRootUser
       Description: User for the aurora cluster
@@ -104,7 +104,7 @@ Resources:
   PassParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Sub "${ProjectName}/${Env}/db/rootpass"
+      Name: !Sub "/${ProjectName}/${Env}/db/rootpass"
       Type: String
       Value: !Ref ClusterRootPass
       Description: Pass for the aurora cluster
