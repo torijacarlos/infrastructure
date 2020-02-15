@@ -1,10 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09" 
 
-Mappings: 
-  RegionMap:
-    us-west-2:
-      ami: ami-04590e7389a6e577c 
-
 Parameters: 
   ProjectName: 
     Type: String
