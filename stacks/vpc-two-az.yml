@@ -117,45 +117,26 @@ Resources:
 
   ## private route table
 
-  PrivateRouteTableLeft:
+  PrivateRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${ProjectName}-rt-private-left"
+          Value: !Sub "${ProjectName}-rt-private"
 
-  PrivateRouteTableOutLeft:
+  PrivateRouteTableOut:
     Type: AWS::EC2::Route
     Properties: 
-      RouteTableId: !Ref PrivateRouteTableLeft
+      RouteTableId: !Ref PrivateRouteTable
       DestinationCidrBlock: "0.0.0.0/0"
       NatGatewayId: !Ref NatGatewayLeft
+
   PrivateSubnetLeftRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties: 
-      RouteTableId: !Ref PrivateRouteTableLeft
+      RouteTableId: !Ref PrivateRouteTable
       SubnetId: !Ref PrivateSubnetLeft
-
-  PrivateRouteTableRight:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub "${ProjectName}-rt-private-right"
-
-  PrivateRouteTableOutRight:
-    Type: AWS::EC2::Route
-    Properties: 
-      RouteTableId: !Ref PrivateRouteTableRight
-      DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref NatGatewayLeft
-  PrivateSubnetRightRouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties: 
-      RouteTableId: !Ref PrivateRouteTableRight
-      SubnetId: !Ref PrivateSubnetRight
 
   ## public route table
 
