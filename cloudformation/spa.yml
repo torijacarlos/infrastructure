@@ -1,0 +1,119 @@
+---
+AWSTemplateFormatVersion: "2010-09-09" 
+
+Parameters: 
+  ProjectName: 
+    Type: String
+    AllowedPattern: "[a-z]+"
+    Description: Project that will be using this instances
+  Env: 
+    Type: String
+    AllowedValues: 
+      - "prod"
+      - "dev"
+    Description: Environment in which the project is being executed
+  App: 
+    Type: String
+    AllowedValues: 
+      - "webapp"
+      - "landing"
+    Description: Responsibility of the spa
+  DNSRoute: 
+    Type: String
+    Description: DNS Route for the application
+  Certificate:
+    Type: String
+    Description: SSL certificate used for the distribution
+  HostedZoneName:
+    Type: String
+    Default: seikou.io
+    Description: Hosted zone for the current spa
+  HostedZoneId:
+    Type: String
+    Default: Z2FDTNDATAQYW2
+    Description: Hosted zone for the current spa
+
+Resources:
+  
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName: !Sub "spa.${ProjectName}.${App}" 
+      VersioningConfiguration: 
+        Status: Enabled
+      WebsiteConfiguration: 
+        IndexDocument: index.html
+        ErrorDocument: index.html
+
+  DistributionIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub "${ProjectName}-${Env}-${App}"
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: !Ref Bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              CanonicalUser: !GetAtt DistributionIdentity.S3CanonicalUserId
+            Action: "s3:GetObject"
+            Resource: !Sub "${Bucket.Arn}/*"
+
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties: 
+      DistributionConfig:
+        Origins: 
+          - DomainName: !GetAtt Bucket.DomainName
+            Id: !Sub "S3-${Bucket}"
+            OriginPath: !Sub "/${Env}"
+            S3OriginConfig: 
+              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${DistributionIdentity}"
+        DefaultCacheBehavior: 
+          TargetOriginId: !Sub "S3-${Bucket}"
+          ForwardedValues:
+            QueryString: false
+          AllowedMethods: 
+            - GET
+            - HEAD
+          Compress: true
+          DefaultTTL: 86400
+          MaxTTL: 31536000
+          MinTTL: 0
+          ViewerProtocolPolicy: redirect-to-https
+        PriceClass: PriceClass_All
+        Aliases: 
+          - !Ref DNSRoute
+        CustomErrorResponses: 
+          - ErrorCachingMinTTL: 300
+            ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCachingMinTTL: 300
+            ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+        DefaultRootObject: index.html
+        Enabled: true
+        ViewerCertificate: 
+          AcmCertificateArn: !Ref Certificate
+          MinimumProtocolVersion: TLSv1.1_2016
+          SslSupportMethod: sni-only
+
+  SPARoute:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: !Ref HostedZoneName
+      Comment: Zone targeted
+      RecordSets:
+      - Name: !Ref DNSRoute
+        Type: A
+        AliasTarget:
+          HostedZoneId: !Ref HostedZoneId
+          DNSName: !GetAtt Distribution.DomainName
+          
